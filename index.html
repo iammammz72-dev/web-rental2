@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Rental Barang</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #eef1f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 8px 12px;
+            margin-top: 10px;
+            border: none;
+            color: white;
+            background: #007bff;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input {
+            padding: 8px;
+            width: 95%;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        h2, h3 {
+            text-align: center;
+        }
+        ul {
+            padding-left: 20px;
+        }
+
+        /* STYLE STRUK */
+        #struk {
+            display: none;
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border: 2px dashed #333;
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #struk, #struk * {
+                visibility: visible;
+            }
+            #struk {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h2>Sistem Rental Barang</h2>
+
+    <h3>Tambah Barang Baru</h3>
+    <input id="namaBarang" placeholder="Nama barang">
+    <input id="hargaBarang" placeholder="Harga sewa per hari">
+    <button onclick="tambahBarang()">Tambah Barang</button>
+
+    <h3>Barang Tersedia</h3>
+    <ul id="listBarang"></ul>
+
+    <button onclick="sewaBarang()">Sewa Barang</button>
+
+    <h3>Barang Disewa</h3>
+    <ul id="listSewa"></ul>
+
+    <button onclick="kembalikanBarang()">Kembalikan Barang</button>
+
+    <!-- AREA STRUK -->
+    <div id="struk">
+        <h2>STRUK SEWA BARANG</h2>
+        <p id="strukBarang"></p>
+        <p id="strukHarga"></p>
+        <p id="strukTgl"></p>
+        <p id="strukTotal"></p>
+        <button onclick="window.print()">Cetak / Download PDF</button>
+    </div>
+
+</div>
+
+<script>
+    let barang = JSON.parse(localStorage.getItem("barang")) || [
+        {nama: "Kamera", harga: 50000},
+        {nama: "Tripod", harga: 20000},
+        {nama: "Laptop", harga: 100000},
+        {nama: "Proyektor", harga: 80000},
+    ];
+
+    let disewa = JSON.parse(localStorage.getItem("disewa")) || [];
+
+    function simpanData() {
+        localStorage.setItem("barang", JSON.stringify(barang));
+        localStorage.setItem("disewa", JSON.stringify(disewa));
+    }
+
+    function tampilkanData() {
+        let listBarang = document.getElementById("listBarang");
+        let listSewa = document.getElementById("listSewa");
+
+        listBarang.innerHTML = "";
+        listSewa.innerHTML = "";
+
+        barang.forEach((b, i) => {
+            listBarang.innerHTML += `<li>${i+1}. ${b.nama} — Rp${b.harga}/hari</li>`;
+        });
+
+        disewa.forEach((b, i) => {
+            listSewa.innerHTML += `<li>
+                ${i+1}. ${b.nama}  
+                (Sewa: ${b.tglSewa} — Kembali: ${b.tglKembali}) 
+                — Total: Rp${b.total}
+            </li>`;
+        });
+    }
+
+    function tambahBarang() {
+        let nama = document.getElementById("namaBarang").value;
+        let harga = document.getElementById("hargaBarang").value;
+
+        if (nama === "" || harga === "") {
+            alert("Isi nama barang dan harga!");
+            return;
+        }
+
+        barang.push({nama: nama, harga: parseInt(harga)});
+        simpanData();
+        tampilkanData();
+
+        alert("Barang berhasil ditambah!");
+    }
+
+    function sewaBarang() {
+        let pilihan = prompt("Masukkan nomor barang yang ingin disewa:");
+        let index = parseInt(pilihan) - 1;
+
+        if (index < 0 || index >= barang.length) {
+            alert("Pilihan tidak valid!");
+            return;
+        }
+
+        let tglSewa = prompt("Tanggal sewa (YYYY-MM-DD):");
+        let tglKembali = prompt("Tanggal kembali (YYYY-MM-DD):");
+
+        let hari = (new Date(tglKembali) - new Date(tglSewa)) / (1000 * 3600 * 24);
+        if (hari <= 0) {
+            alert("Tanggal kembali harus setelah tanggal sewa!");
+            return;
+        }
+
+        let dipilih = barang.splice(index, 1)[0];
+        let total = dipilih.harga * hari;
+
+        let dataSewa = {
+            nama: dipilih.nama,
+            harga: dipilih.harga,
+            tglSewa,
+            tglKembali,
+            total
+        };
+
+        disewa.push(dataSewa);
+
+        // Tampilkan STRUK
+        tampilkanStruk(dataSewa);
+
+        simpanData();
+        tampilkanData();
+    }
+
+    function tampilkanStruk(data) {
+        document.getElementById("strukBarang").innerText =
+            `Barang: ${data.nama}`;
+        document.getElementById("strukHarga").innerText =
+            `Harga per hari: Rp${data.harga}`;
+        document.getElementById("strukTgl").innerText =
+            `Sewa: ${data.tglSewa} — Kembali: ${data.tglKembali}`;
+        document.getElementById("strukTotal").innerText =
+            `Total pembayaran: Rp${data.total}`;
+
+        document.getElementById("struk").style.display = "block";
+    }
+
+    function kembalikanBarang() {
+        let pilihan = prompt("Nomor barang yang dikembalikan:");
+        let index = parseInt(pilihan) - 1;
+
+        if (index < 0 || index >= disewa.length) {
+            alert("Pilihan tidak valid!");
+            return;
+        }
+
+        let kembali = disewa.splice(index, 1)[0];
+
+        barang.push({nama: kembali.nama, harga: kembali.harga});
+
+        simpanData();
+        tampilkanData();
+
+        alert("Barang berhasil dikembalikan!");
+    }
+
+    tampilkanData();
+</script>
+
+</body>
+</html>
